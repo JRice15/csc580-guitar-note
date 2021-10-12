@@ -8,7 +8,7 @@ import jams
 import soundfile
 import sounddevice as sd
 
-from utils import *
+import utils, visualize
 
 # plt.ion()
 
@@ -27,20 +27,13 @@ def audio_CQT(audio_path, start, dur):
     CQT[CQT < -60] = -120
     return CQT
 
-file = "annotation/02_SS1-100-C#_solo.jams"
-print(file)
+file = "annotation/02_SS1-100-C#_comp.jams"
 jam = jams.load(file)
 
-# play_audio(data, sr)
+visualize.show_jam(jam, midi=True)
 
-annots = jam.search(namespace="pitch_contour")
+file = "audio_mono-mic/02_SS1-100-C#_solo_mic.wav"
 
-plt.gcf().set_size_inches(12, 5)
-for string_annot in annots:
-    df = string_annot.to_dataframe()
-    df["freq"] = df["value"].apply(lambda x: x["frequency"])
-
-    plt.plot(df.time, df.freq)
-
-plt.legend(["E", "A", "D", "G", "B", "e"])
-plt.show()
+# spect = audio_CQT(file, None, None)
+# plt.pcolormesh(spect)
+# plt.show()
