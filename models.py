@@ -1,8 +1,17 @@
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow.keras.layers import Dense, Conv2D, MaxPooling2D, Input, Flatten, Dropout
+from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten, Input,
+                                     MaxPooling2D, Reshape)
+from tensorflow.keras import Model
+
+from utils import MIDI_MAX, MIDI_MIN
 
 
+def get_model(modelname, input_shape):
+    if modelname == "tio":
+        return tio_model(input_shape)
+    else:
+        raise ValueError("Unknown model {}".format(modelname))
 
 def tio_model(input_shape):
     """
@@ -10,26 +19,35 @@ def tio_model(input_shape):
     """
     model_in = Input(shape=input_shape)
 
-    conv1 = Conv2D(32, kernel_size=(3, 3), activation='relu')(model_in)
+    w_channels = Reshape(input_shape + (1,))(model_in)
+    conv1 = Conv2D(32, kernel_size=(3, 3), activation='relu')(w_channels)
     conv2 = Conv2D(64, kernel_size=(3, 3), activation='relu')(conv1)
     conv3 = Conv2D(64, kernel_size=(3, 3), activation='relu')(conv2)
 
-    pool1 = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(conv3)
-    flat = Flatten()(pool1)
+    pool = MaxPooling2D(pool_size=(2, 2), strides=(2, 2))(conv3)
+    flat = Flatten()(pool)
 
-    outputs = []
-    for string in "EADGBe":
-        x = Dense(152, activation='relu')(flat)
-        x = Dropout(0.5)(x)
-        x = Dense(76)(x)
-        x = Dropout(0.2)(x)
-        out = Dense(19, activation='softmax', name=string+'-string')(x)
-        outputs.append(out)
+    ### Original string-wise model
+    # outputs = []
+    # for string in "EADGBe":
+    #     x = Dense(152, activation='relu')(flat)
+    #     x = Dropout(0.5)(x)
+    #     x = Dense(76)(x)
+    #     x = Dropout(0.2)(x)
+    #     out = Dense(19, activation='softmax', name=string+'-string')(x)
+    #     outputs.append(out)
+
+    ### New version
+    x = Dense(128, activation='relu')(flat)
+    x = Dropout(0.5)(x)
+    x = Dense(64)(x)
+    x = Dropout(0.2)(x)
+    outputs = Dense(MIDI_MAX-MIDI_MIN, activation='sigmoid', name="output")(x)
 
     # Create model
     model = Model(inputs=model_in, outputs=outputs)
 
-    loss = ['categorical_crossentropy'] * 6
+    loss = 'binary_crossentropy'
     metrics = ['accuracy']
 
     return model, loss, metrics
