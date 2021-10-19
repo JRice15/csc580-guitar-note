@@ -119,7 +119,7 @@ class SpectogramGenerator(keras.utils.Sequence):
 
 
 
-def get_generators(val_split=0.1, **kwargs):
+def get_generators(val_split=0.1, train_batchsize=16, **kwargs):
     """
     create train, validation, and test generators
     test set is all files created by player #05
@@ -135,10 +135,13 @@ def get_generators(val_split=0.1, **kwargs):
     train_ids = np.array([i for i in ids if not i.startswith("05")])
     np.random.shuffle(train_ids)
     val_ids, train_ids = train_ids[:val_size], train_ids[val_size:]
+
+    # TEMP
+    test_ids = test_ids[:2]
     
-    train_gen = SpectogramGenerator(train_ids, name="train", **kwargs)
-    val_gen = SpectogramGenerator(val_ids, name="val", **kwargs)
-    test_gen = SpectogramGenerator(test_ids, name="test", **kwargs)
+    train_gen = SpectogramGenerator(train_ids, name="train", batchsize=train_batchsize, **kwargs)
+    val_gen = SpectogramGenerator(val_ids, name="val", batchsize=1, **kwargs)
+    test_gen = SpectogramGenerator(test_ids, name="test", batchsize=1, **kwargs)
 
     return train_gen, val_gen, test_gen
 

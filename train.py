@@ -6,6 +6,7 @@ from pathlib import PurePath
 import sys
 import datetime
 import json
+import pickle
 
 import jams
 import librosa
@@ -42,7 +43,7 @@ os.makedirs(MODEL_DIR)
 with open(MODEL_DIR+"args.json", "w") as f:
     json.dump(vars(ARGS), f, indent=2)
 
-train_gen, val_gen, test_gen = get_generators(batchsize=ARGS.batchsize)
+train_gen, val_gen, _ = get_generators(train_batchsize=ARGS.batchsize)
 input_shape = train_gen.x_shape
 
 model, loss, metrics = get_model(ARGS.model, input_shape)
@@ -68,14 +69,15 @@ callback_dict = {
 try:
     H = model.fit(
         train_gen,
-        batch_size=ARGS.batchsize,
         callbacks=list(callback_dict.values()),
         epochs=1000,
         steps_per_epoch=20,
         validation_data=val_gen.load_all(),
     )
 except KeyboardInterrupt:
+    print("\nTraining ended manually")
     H = callback_dict["history"]
 
-
+with open(MODEL_DIR+"history.pickle", "wb") as f:
+    pickle.dump(H.history, f)
 
