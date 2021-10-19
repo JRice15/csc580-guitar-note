@@ -20,8 +20,7 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten, Input,
                                      MaxPooling2D)
 from tensorflow.keras import optimizers, callbacks
 
-import utils
-import visualize
+from utils import MIDI_MAX, MIDI_MIN
 from data_generator import get_generators
 from tf_utils import output_model
 
@@ -40,17 +39,6 @@ _, _, test_gen = get_generators()
 
 model = keras.models.load_model(MODEL_DIR+"model.h5")
 
-print("\nEvaluating on test set")
-results = model.evaluate(test_gen)
-
-results = {model.metrics_names[i]:v for i,v in enumerate(results)}
-print("Results:")
-for k,v in results.items():
-    print(" ", k+":", v)
-
-with open(MODEL_DIR+"test_results.json", "w") as f:
-    json.dump(results, f, indent=2)
-
 print("Generating visualizations")
 os.makedirs(MODEL_DIR+"visualizations/", exist_ok=True)
 # plot 5 random samples
@@ -61,10 +49,26 @@ for i in range(0, len(test_gen), len(test_gen)//5):
     pred = np.squeeze(pred)
     # print(f"Prediction, Ground-Truth {i}:")
     # print(np.stack((pred, y), axis=-1))
-    index = np.arange(len(pred))
+    index = np.arange(len(pred)) + MIDI_MIN
     plt.plot(index, pred, color="blue", label="prediction")
     plt.bar(index, y, color="green", label="ground-truth")
     plt.ylim(0, 1)
+    plt.xlabel("Midi Note")
     plt.legend()
-    plt.savefig(MODEL_DIR+"visualizations/"+str(i)+".png")
+    plt.savefig(MODEL_DIR+"visualizations/"+str(i)+"_pred.png")
     plt.clf()
+    plt.pcolormesh(np.squeeze(x))
+    plt.savefig(MODEL_DIR+"visualizations/"+str(i)+"_input.png")
+    plt.clf()
+
+
+print("\nEvaluating on test set")
+results = model.evaluate(test_gen)
+
+results = {model.metrics_names[i]:v for i,v in enumerate(results)}
+print("Results:")
+for k,v in results.items():
+    print(" ", k+":", v)
+
+with open(MODEL_DIR+"test_results.json", "w") as f:
+    json.dump(results, f, indent=2)

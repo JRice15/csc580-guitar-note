@@ -84,5 +84,8 @@ def load_annot_df_from_midi(filename):
     return full_df.reset_index(drop=True)
 
 
+# TEST_FILE = "guitarset/annotation/00_BN1-129-Eb_comp.jams"
 
+
+# print(load_annot_df_from_midi(TEST_FILE))
 

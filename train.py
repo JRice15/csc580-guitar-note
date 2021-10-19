@@ -71,7 +71,6 @@ try:
         train_gen,
         callbacks=list(callback_dict.values()),
         epochs=1000,
-        steps_per_epoch=20,
         validation_data=val_gen.load_all(),
     )
 except KeyboardInterrupt:

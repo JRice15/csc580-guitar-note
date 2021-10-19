@@ -58,8 +58,8 @@ class SpectogramGenerator(keras.utils.Sequence):
                 if i % 20 == 0:
                     print(" ", i, "of", len(self.ids))
                 df = load_annot_df_from_midi(ANNOT_DIR+file_id+".jams")
-                df["round_start"] = (df["time"] / self.dur_step).round()
-                df["round_end"] = (df["end"] / self.dur_step).round()
+                df["round_start"] = np.floor(df["time"] / self.dur_step)
+                df["round_end"] = np.ceil(df["end"] / self.dur_step)
                 df["round_midi"] = df["midi"].round().astype(int)
                 new_rows = []
                 for row in df.itertuples():
