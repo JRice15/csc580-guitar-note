@@ -50,3 +50,21 @@ for k,v in results.items():
 
 with open(MODEL_DIR+"test_results.json", "w") as f:
     json.dump(results, f, indent=2)
+
+print("Generating visualizations")
+os.makedirs(MODEL_DIR+"visualizations/", exist_ok=True)
+# plot 5 random samples
+for i in range(0, len(test_gen), len(test_gen)//5):
+    x, y = test_gen[i]
+    pred = model.predict(x)
+    y = np.squeeze(y)
+    pred = np.squeeze(pred)
+    # print(f"Prediction, Ground-Truth {i}:")
+    # print(np.stack((pred, y), axis=-1))
+    index = np.arange(len(pred))
+    plt.plot(index, pred, color="blue", label="prediction")
+    plt.bar(index, y, color="green", label="ground-truth")
+    plt.ylim(0, 1)
+    plt.legend()
+    plt.savefig(MODEL_DIR+"visualizations/"+str(i)+".png")
+    plt.clf()

@@ -135,9 +135,6 @@ def get_generators(val_split=0.1, train_batchsize=16, **kwargs):
     train_ids = np.array([i for i in ids if not i.startswith("05")])
     np.random.shuffle(train_ids)
     val_ids, train_ids = train_ids[:val_size], train_ids[val_size:]
-
-    # TEMP
-    test_ids = test_ids[:2]
     
     train_gen = SpectogramGenerator(train_ids, name="train", batchsize=train_batchsize, **kwargs)
     val_gen = SpectogramGenerator(val_ids, name="val", batchsize=1, **kwargs)
