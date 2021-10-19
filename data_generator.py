@@ -104,6 +104,19 @@ class SpectogramGenerator(keras.utils.Sequence):
     def on_epoch_end(self):
         rd.shuffle(self.elems)
 
+    def load_all(self):
+        X = None
+        Y = None
+        for i in range(len(self)):
+            x, y = self[i]
+            if X is None:
+                X = x
+                Y = y
+            else:
+                X = np.concatenate((X, x))
+                Y = np.concatenate((Y, y))
+        return X, Y
+
 
 
 def get_generators(val_split=0.1, **kwargs):

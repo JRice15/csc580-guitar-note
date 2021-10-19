@@ -2,7 +2,10 @@ import glob
 import os
 import re
 import argparse
+from pathlib import PurePath
 import sys
+import datetime
+import json
 
 import jams
 import librosa
@@ -21,13 +24,23 @@ import utils
 import visualize
 from models import get_model
 from data_generator import get_generators
+from tf_utils import output_model
 
 
 parser = argparse.ArgumentParser()
+parser.add_argument("--name",default="default")
 parser.add_argument("--model",required=True)
 parser.add_argument("--lr",default=0.001,type=float,help="learning rate")
 parser.add_argument("--batchsize",default=16,type=int)
 ARGS = parser.parse_args()
+
+now = datetime.datetime.now()
+timestamp = now.strftime("-%y%m%d-%H%M%S")
+MODEL_DIR = "models/"+ARGS.name+timestamp+"/"
+os.makedirs(MODEL_DIR)
+
+with open(MODEL_DIR+"args.json", "w") as f:
+    json.dump(vars(ARGS), f, indent=2)
 
 train_gen, val_gen, test_gen = get_generators(batchsize=ARGS.batchsize)
 input_shape = train_gen.x_shape
@@ -41,16 +54,28 @@ model.compile(
 )
 
 model.summary()
+output_model(model, MODEL_DIR)
 
 callback_dict = {
     "history": callbacks.History(),
-    "model_checkpoint": callbacks.ModelCheckpoint("model.h5", verbose=1, save_best_only=True),
+    "model_checkpoint": callbacks.ModelCheckpoint(MODEL_DIR+"model.h5", 
+        verbose=1, save_best_only=True),
+    "reducelr": callbacks.ReduceLROnPlateau(factor=0.2, patience=10,
+        min_lr=1e-6, verbose=1),
     "earlystopping": callbacks.EarlyStopping(patience=20),
 }
 
-model.fit(
-    train_gen,
-    batchsize=ARGS.batchsize,
-    callbacks=list(callback_dict.values()),
-    epochs=1000,
-)
+try:
+    H = model.fit(
+        train_gen,
+        batch_size=ARGS.batchsize,
+        callbacks=list(callback_dict.values()),
+        epochs=1000,
+        steps_per_epoch=20,
+        validation_data=val_gen.load_all(),
+    )
+except KeyboardInterrupt:
+    H = callback_dict["history"]
+
+
+
