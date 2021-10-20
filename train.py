@@ -71,8 +71,8 @@ try:
         callbacks=list(callback_dict.values()),
         epochs=1000,
         validation_data=val_gen.load_all(),
-        workers=4,
-        use_multiprocessing=True,
+        # workers=4,
+        # use_multiprocessing=True,
     )
 except KeyboardInterrupt:
     print("\nTraining ended manually")

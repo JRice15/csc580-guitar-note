@@ -3,6 +3,7 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras import Model
 
+import custom_layers
 from utils import MIDI_MAX, MIDI_MIN
 
 
@@ -60,8 +61,7 @@ def lstm1(input_shape):
     x = model_in
 
     # change from shape (batch, freq, time) to (batch, time freq) to make it a timeseries
-    x = layers.Lambda(
-        lambda x: tf.transpose(x, perm=[0, 2, 1]) )(x)
+    x = custom_layers.Transpose([0, 2, 1])(x)
 
     # calculate timestep-wise features
     x = layers.LSTM(128, return_sequences=True)(x)
