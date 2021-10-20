@@ -23,6 +23,7 @@ from tensorflow.keras import optimizers, callbacks
 from utils import MIDI_MAX, MIDI_MIN
 from data_generator import get_generators
 from tf_utils import output_model
+from custom_layers import CUSTOM_LAYER_DICT
 
 
 parser = argparse.ArgumentParser()
@@ -37,7 +38,7 @@ print("\nLoading model stored at", MODEL_DIR)
 
 _, _, test_gen = get_generators()
 
-model = keras.models.load_model(MODEL_DIR+"model.h5")
+model = keras.models.load_model(MODEL_DIR+"model.h5", custom_objects=CUSTOM_LAYER_DICT)
 
 print("Generating visualizations")
 os.makedirs(MODEL_DIR+"visualizations/", exist_ok=True)

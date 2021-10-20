@@ -22,4 +22,6 @@ class Transpose(layers.Layer):
         return config
 
 
-
+CUSTOM_LAYER_DICT = {
+    "Transpose": Transpose
+}
