@@ -41,14 +41,12 @@ model = keras.models.load_model(MODEL_DIR+"model.h5")
 
 print("Generating visualizations")
 os.makedirs(MODEL_DIR+"visualizations/", exist_ok=True)
-# plot 5 random samples
-for i in range(0, len(test_gen), len(test_gen)//5):
+# plot 10 random samples
+for i in range(0, len(test_gen), len(test_gen)//10):
     x, y = test_gen[i]
     pred = model.predict(x)
     y = np.squeeze(y)
     pred = np.squeeze(pred)
-    # print(f"Prediction, Ground-Truth {i}:")
-    # print(np.stack((pred, y), axis=-1))
     index = np.arange(len(pred)) + MIDI_MIN
     plt.plot(index, pred, color="blue", label="prediction")
     plt.bar(index, y, color="green", label="ground-truth")

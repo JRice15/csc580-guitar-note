@@ -116,7 +116,7 @@ dependencies:
   - nettle=3.6=hedd7734_0
   - numba=0.53.1=py39h32e38f5_1
   - numexpr=2.7.3=py39h4d6be9b_0
-  - numpy=1.21.2=py39h7eed0ac_0
+  - numpy=1.19.5=py39h7eed0ac_2
   - oauthlib=3.1.1=pyhd8ed1ab_0
   - olefile=0.46=pyh9f0ad1d_1
   - openh264=2.1.1=hfd3ada9_0

@@ -21,12 +21,10 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten, Input,
                                      MaxPooling2D)
 from tensorflow.keras import optimizers, callbacks
 
-import utils
-import visualize
 from models import get_model
 from data_generator import get_generators
 from tf_utils import output_model
-
+from utils import MIDI_MAX, MIDI_MIN
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--name",default="default")
@@ -45,6 +43,7 @@ with open(MODEL_DIR+"args.json", "w") as f:
 
 train_gen, val_gen, _ = get_generators(train_batchsize=ARGS.batchsize)
 input_shape = train_gen.x_shape
+
 
 model, loss, metrics = get_model(ARGS.model, input_shape)
 
@@ -72,6 +71,8 @@ try:
         callbacks=list(callback_dict.values()),
         epochs=1000,
         validation_data=val_gen.load_all(),
+        workers=4,
+        use_multiprocessing=True,
     )
 except KeyboardInterrupt:
     print("\nTraining ended manually")

@@ -8,9 +8,10 @@ import matplotlib.pyplot as plt
 import librosa
 
 
-MIDI_MIN = 44
+MIDI_MIN = 40
 MIDI_MAX = 92
-
+FREQ_MIN = librosa.core.midi_to_hz(MIDI_MIN)
+FREQ_MAX = librosa.core.midi_to_hz(MIDI_MAX)
 
 def play_audio(data, samplerate):
     sd.play(data, samplerate)
@@ -25,7 +26,7 @@ def audio_CQT(audio_path, start, dur):
     """
     sr = librosa.get_samplerate(audio_path)
     data, sr = librosa.load(audio_path, sr=sr, mono=True, offset=start, duration=dur)
-    CQT = librosa.cqt(data, sr=sr, hop_length=1024, fmin=None, n_bins=96, bins_per_octave=12)
+    CQT = librosa.cqt(data, sr=sr, hop_length=1024, fmin=FREQ_MIN, n_bins=(MIDI_MAX-MIDI_MIN), bins_per_octave=12)
     CQT_mag = librosa.magphase(CQT)[0]**4
     CQT = librosa.core.amplitude_to_db(CQT_mag, ref=np.amax)
     CQT[CQT < -60] = -120
@@ -85,7 +86,5 @@ def load_annot_df_from_midi(filename):
 
 
 # TEST_FILE = "guitarset/annotation/00_BN1-129-Eb_comp.jams"
-
-
 # print(load_annot_df_from_midi(TEST_FILE))
 
