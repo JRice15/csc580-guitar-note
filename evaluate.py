@@ -40,6 +40,20 @@ _, _, test_gen = get_generators()
 
 model = keras.models.load_model(MODEL_DIR+"model.h5", custom_objects=CUSTOM_LAYER_DICT)
 
+print("Generating train metric plots")
+os.makedirs(MODEL_DIR+"training/", exist_ok=True)
+with open(MODEL_DIR+"history.pickle", "rb") as f:
+    history = pickle.load(f)
+
+for metric, values in history.items():
+    if not metric.startswith("val_"):
+        plt.plot(values)
+        plt.plot(history["val_"+metric])
+        plt.title(metric)
+        plt.legend(["train", "val"])
+        plt.savefig(MODEL_DIR+"training/"+metric+".png")
+        plt.clf()
+
 print("Generating visualizations")
 os.makedirs(MODEL_DIR+"visualizations/", exist_ok=True)
 # plot 10 random samples
@@ -64,10 +78,13 @@ for i in range(0, len(test_gen), len(test_gen)//10):
 print("\nEvaluating on test set")
 results = model.evaluate(test_gen)
 
-results = {model.metrics_names[i]:v for i,v in enumerate(results)}
-print("Results:")
-for k,v in results.items():
-    print(" ", k+":", v)
+if isinstance(results, dict):
+    results = {model.metrics_names[i]:v for i,v in enumerate(results)}
+    print("Results:")
+    for k,v in results.items():
+        print(" ", k+":", v)
+else:
+    print(results)
 
 with open(MODEL_DIR+"test_results.json", "w") as f:
     json.dump(results, f, indent=2)

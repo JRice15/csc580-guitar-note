@@ -69,6 +69,7 @@ try:
     H = model.fit(
         train_gen,
         callbacks=list(callback_dict.values()),
+        steps_per_epoch=50,
         epochs=1000,
         validation_data=val_gen.load_all(),
         # workers=4,

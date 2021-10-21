@@ -12,6 +12,8 @@ def get_model(modelname, input_shape):
         return tio_model(input_shape)
     elif modelname == "lstm1":
         return lstm1(input_shape)
+    elif modelname == "lstm2":
+        return lstm2(input_shape)
     else:
         raise ValueError("Unknown model {}".format(modelname))
 
@@ -73,6 +75,35 @@ def lstm1(input_shape):
     # x = layers.Dropout(0.5)(x)
     # x = layers.Dense(64, activation='relu')(x)
     # x = layers.Dropout(0.2)(x)
+    outputs = layers.Dense(MIDI_MAX-MIDI_MIN, activation='sigmoid', name="output")(x)
+
+    # Create model
+    model = Model(inputs=model_in, outputs=outputs)
+
+    loss = 'binary_crossentropy'
+    # TODO we need to find a meaningful metric for this data
+    metrics = None
+
+    return model, loss, metrics
+
+def lstm2(input_shape):
+    model_in = layers.Input(shape=input_shape)
+    x = model_in
+
+    batchsize, time_dim, freq_dim = x.shape
+
+    # change from shape (batch, freq, time) to (batch, time, freq) to make it a timeseries
+    x = custom_layers.Transpose([0, 2, 1])(x)
+
+    # calculate timestep-wise features
+    x = layers.LSTM(128, return_sequences=True)(x)
+    # calculate accumulated feature
+    x = layers.LSTM(64)(x)
+
+    # dense output network
+    x = layers.Dense(64, activation='relu')(x)
+    x = layers.Dense(64, activation='relu')(x)
+    x = layers.Dropout(0.2)(x)
     outputs = layers.Dense(MIDI_MAX-MIDI_MIN, activation='sigmoid', name="output")(x)
 
     # Create model
