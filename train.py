@@ -42,8 +42,9 @@ with open(MODEL_DIR+"args.json", "w") as f:
     json.dump(vars(ARGS), f, indent=2)
 
 train_gen, val_gen, _ = get_generators(train_batchsize=ARGS.batchsize)
+train_gen.summary()
+val_gen.summary()
 input_shape = train_gen.x_shape
-
 
 model, loss, metrics = get_model(ARGS.model, input_shape)
 
@@ -60,9 +61,9 @@ callback_dict = {
     "history": callbacks.History(),
     "model_checkpoint": callbacks.ModelCheckpoint(MODEL_DIR+"model.h5", 
         verbose=1, save_best_only=True),
-    "reducelr": callbacks.ReduceLROnPlateau(factor=0.2, patience=10,
+    "reducelr": callbacks.ReduceLROnPlateau(factor=0.2, patience=5,
         min_lr=1e-6, verbose=1),
-    "earlystopping": callbacks.EarlyStopping(patience=20),
+    "earlystopping": callbacks.EarlyStopping(patience=12),
 }
 
 try:

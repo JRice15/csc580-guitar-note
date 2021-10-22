@@ -20,7 +20,7 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten, Input,
                                      MaxPooling2D)
 from tensorflow.keras import optimizers, callbacks
 
-from utils import MIDI_MAX, MIDI_MIN
+from utils import MIDI_MAX, MIDI_MIN, DB_MAX, DB_MIN
 from data_generator import get_generators
 from tf_utils import output_model
 from custom_layers import CUSTOM_LAYER_DICT
@@ -37,6 +37,7 @@ MODEL_DIR = sorted(matches)[-1]
 print("\nLoading model stored at", MODEL_DIR)
 
 _, _, test_gen = get_generators()
+test_gen.summary()
 
 model = keras.models.load_model(MODEL_DIR+"model.h5", custom_objects=CUSTOM_LAYER_DICT)
 
@@ -58,19 +59,32 @@ print("Generating visualizations")
 os.makedirs(MODEL_DIR+"visualizations/", exist_ok=True)
 # plot 10 random samples
 for i in range(0, len(test_gen), len(test_gen)//10):
-    x, y = test_gen[i]
+    x, y, elem_ids = test_gen.get_batch(i)
+    elem_id = np.squeeze(elem_ids)
+    elem_id_str = str(elem_id[0]) + " step " + str(elem_id[1])
     pred = model.predict(x)
     y = np.squeeze(y)
+    x = np.squeeze(x)
     pred = np.squeeze(pred)
     index = np.arange(len(pred)) + MIDI_MIN
+    # prediction probs vs gt hist
     plt.plot(index, pred, color="blue", label="prediction")
     plt.bar(index, y, color="green", label="ground-truth")
     plt.ylim(0, 1)
-    plt.xlabel("Midi Note")
+    plt.xlabel("midi mote")
     plt.legend()
+    plt.title(elem_id_str)
     plt.savefig(MODEL_DIR+"visualizations/"+str(i)+"_pred.png")
     plt.clf()
-    plt.pcolormesh(np.squeeze(x))
+    # input spectrogram
+    time_dim = np.linspace(0, test_gen.dur_step, num=x.shape[-1])
+    meshX, meshY = np.meshgrid(time_dim, index)
+    spectro = (x * (DB_MAX - DB_MIN)) + DB_MIN
+    m = plt.pcolormesh(meshX, meshY, spectro, vmin=-120, vmax=0, shading="nearest")
+    plt.colorbar(m, label="dB")
+    plt.xlabel("seconds")
+    plt.ylabel("midi note")
+    plt.title(elem_id_str)
     plt.savefig(MODEL_DIR+"visualizations/"+str(i)+"_input.png")
     plt.clf()
 

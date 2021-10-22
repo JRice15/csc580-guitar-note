@@ -12,6 +12,8 @@ MIDI_MIN = 40
 MIDI_MAX = 92
 FREQ_MIN = librosa.core.midi_to_hz(MIDI_MIN)
 FREQ_MAX = librosa.core.midi_to_hz(MIDI_MAX)
+DB_MIN = -120.0
+DB_MAX = 0.0
 
 def play_audio(data, samplerate):
     sd.play(data, samplerate)
@@ -27,9 +29,12 @@ def audio_CQT(audio_path, start, dur):
     sr = librosa.get_samplerate(audio_path)
     data, sr = librosa.load(audio_path, sr=sr, mono=True, offset=start, duration=dur)
     CQT = librosa.cqt(data, sr=sr, hop_length=1024, fmin=FREQ_MIN, n_bins=(MIDI_MAX-MIDI_MIN), bins_per_octave=12)
-    CQT_mag = librosa.magphase(CQT)[0]**4
-    CQT = librosa.core.amplitude_to_db(CQT_mag, ref=np.amax)
-    CQT[CQT < -60] = -120
+    CQT_mag = librosa.magphase(CQT)[0]
+    # print("\n", CQT_mag.max(), CQT_mag.min(), "\n")
+    # CQT_mag = CQT_mag ** 4
+    ref = max(CQT_mag.max(), 1.0)
+    CQT = librosa.core.amplitude_to_db(CQT_mag, ref=ref) # removed ref=np.amax arg
+    # CQT[CQT < -60] = -120
     return CQT
 
 

@@ -1,18 +1,19 @@
 import glob
-import random as rd
 import os
+import random as rd
 import re
 import sys
 from pathlib import PurePath
 
 import librosa
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
 
-from utils import audio_CQT, load_annot_df_from_midi, play_audio, MIDI_MAX, MIDI_MIN
+from utils import (MIDI_MAX, MIDI_MIN, audio_CQT, load_annot_df_from_midi,
+                   play_audio, DB_MAX, DB_MIN)
 
 AUDIO_DIR = "guitarset/audio_mono-mic/"
 ANNOT_DIR = "guitarset/annotation/"
@@ -21,12 +22,14 @@ ANNOT_DIR = "guitarset/annotation/"
 
 class SpectogramGenerator(keras.utils.Sequence):
 
-    def __init__(self, ids, name, dur_step=0.2, batchsize=16):
+    def __init__(self, ids, name, dur_step=0.2, batchsize=16, random_seed=10):
         self.name = name
         print("Loading", self.name, "dataset")
         self.ids = ids
         self.dur_step = dur_step
         self.batchsize = batchsize
+        # random number generator
+        self.rng = np.random.default_rng(seed=random_seed)
 
         # training element ids
         self.elems = []
@@ -35,6 +38,7 @@ class SpectogramGenerator(keras.utils.Sequence):
             steps = (np.arange(0, dur-dur_step)/dur_step).astype(int)
             self.elems += [(id, s) for s in steps]
         self.elems = self.elems
+        self.rng.shuffle(self.elems)
 
         # get ground-truth files
         self.load_jams_to_df()
@@ -79,7 +83,6 @@ class SpectogramGenerator(keras.utils.Sequence):
             print("  done")
             self.annot_df = full
 
-
     def __len__(self):
         """
         return number of batches in this generator
@@ -99,10 +102,19 @@ class SpectogramGenerator(keras.utils.Sequence):
             if elem in self.annot_df.index:
                 notes = self.annot_df.loc[elem]
                 self._Y_batch[i][notes["midi"] - MIDI_MIN] = 1
+        self._X_batch = (self._X_batch - DB_MIN) / (DB_MAX - DB_MIN)
         return self._X_batch, self._Y_batch
 
+    def get_batch(self, idx):
+        """
+        return X, Y, and file/timestamp IDs
+        """
+        x, y = self.__getitem__(idx)
+        elems = self.elems[idx*self.batchsize:(idx+1)*self.batchsize]
+        return x, y, elems
+
     def on_epoch_end(self):
-        rd.shuffle(self.elems)
+        self.rng.shuffle(self.elems)
 
     def load_all(self):
         X = None
@@ -117,6 +129,10 @@ class SpectogramGenerator(keras.utils.Sequence):
                 Y = np.concatenate((Y, y))
         return X, Y
 
+    def summary(self):
+        print("DataGenerator:", self.name)
+        print(" ", len(self.ids), "files,", len(self.elems), "individual examples")
+        print("  batchsize", self.batchsize, "results in", len(self.elems)//self.batchsize, "batches")
 
 
 def get_generators(val_split=0.1, train_batchsize=16, **kwargs):
@@ -133,12 +149,22 @@ def get_generators(val_split=0.1, train_batchsize=16, **kwargs):
     val_size = int(len(ids) * val_split)
     test_ids = np.array([i for i in ids if i.startswith("05")])
     train_ids = np.array([i for i in ids if not i.startswith("05")])
-    np.random.shuffle(train_ids)
+    # seeded rng so we get the same validation set every time
+    rng = np.random.default_rng(seed=94958)
+    rng.shuffle(train_ids)
     val_ids, train_ids = train_ids[:val_size], train_ids[val_size:]
     
-    train_gen = SpectogramGenerator(train_ids, name="train", batchsize=train_batchsize, **kwargs)
-    val_gen = SpectogramGenerator(val_ids, name="val", batchsize=1, **kwargs)
-    test_gen = SpectogramGenerator(test_ids, name="test", batchsize=1, **kwargs)
+    train_gen = SpectogramGenerator(train_ids, name="train", random_seed=324, 
+                    batchsize=train_batchsize, **kwargs)
+    val_gen = SpectogramGenerator(val_ids, name="val", random_seed=943, 
+                    batchsize=1, **kwargs)
+    test_gen = SpectogramGenerator(test_ids, name="test", random_seed=860, 
+                    batchsize=1, **kwargs)
 
     return train_gen, val_gen, test_gen
 
+if __name__ == "__main__":
+    tr, v, te = get_generators()
+    tr.summary()
+    v.summary()
+    te.summary()
