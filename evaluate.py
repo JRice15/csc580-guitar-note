@@ -13,6 +13,7 @@ import jams
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
+from tqdm import tqdm
 import tensorflow as tf
 import numpy as np
 from tensorflow import keras
@@ -20,7 +21,7 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten, Input,
                                      MaxPooling2D)
 from tensorflow.keras import optimizers, callbacks
 
-from utils import MIDI_MAX, MIDI_MIN, DB_MAX, DB_MIN
+from utils import MIDI_MAX, MIDI_MIN, DB_MAX, DB_MIN, plot_spectrogram, plot_pred_probs_v_groundtruth
 from data_generator import get_generators
 from tf_utils import output_model
 from custom_layers import CUSTOM_LAYER_DICT
@@ -57,48 +58,84 @@ for metric, values in history.items():
 
 print("Generating visualizations")
 os.makedirs(MODEL_DIR+"visualizations/", exist_ok=True)
-# plot 10 random samples
-for i in range(0, len(test_gen), len(test_gen)//10):
+# plot 10 random samples throughout the dataset
+for i in tqdm(range(0, len(test_gen), len(test_gen)//10)):
     x, y, elem_ids = test_gen.get_batch(i)
     elem_id = np.squeeze(elem_ids)
-    elem_id_str = str(elem_id[0]) + " step " + str(elem_id[1])
+    elem_id_str = str(elem_id[0]) + "_step_" + str(elem_id[1])
     pred = model.predict(x)
     y = np.squeeze(y)
     x = np.squeeze(x)
     pred = np.squeeze(pred)
-    index = np.arange(len(pred)) + MIDI_MIN
     # prediction probs vs gt hist
-    plt.plot(index, pred, color="blue", label="prediction")
-    plt.bar(index, y, color="green", label="ground-truth")
-    plt.ylim(0, 1)
-    plt.xlabel("midi mote")
-    plt.legend()
-    plt.title(elem_id_str)
-    plt.savefig(MODEL_DIR+"visualizations/"+str(i)+"_pred.png")
-    plt.clf()
+    plot_pred_probs_v_groundtruth(y, pred, elem_id_str+"_pred", MODEL_DIR+"visualizations/")
     # input spectrogram
-    time_dim = np.linspace(0, test_gen.dur_step, num=x.shape[-1])
-    meshX, meshY = np.meshgrid(time_dim, index)
-    spectro = (x * (DB_MAX - DB_MIN)) + DB_MIN
-    m = plt.pcolormesh(meshX, meshY, spectro, vmin=-120, vmax=0, shading="nearest")
-    plt.colorbar(m, label="dB")
-    plt.xlabel("seconds")
-    plt.ylabel("midi note")
-    plt.title(elem_id_str)
-    plt.savefig(MODEL_DIR+"visualizations/"+str(i)+"_input.png")
-    plt.clf()
+    plot_spectrogram(x, test_gen.dur_step, elem_id_str+"_input", MODEL_DIR+"visualizations/")
+
+
+print("Calculating metrics...")
+# precision and recall parameters
+# true/false positives, true/false negatives
+truepos = 0
+trueneg = 0
+falsepos = 0
+falseneg = 0
+for i,(x,y) in tqdm(enumerate(test_gen), total=len(test_gen)):
+    pred = model.predict(x)
+    y = np.squeeze(y)
+    x = np.squeeze(x)
+    pred = np.squeeze(pred)
+    # calculate prec/recall parameters
+    pos = (pred > 0.5)
+    ypos = (y > 0.5)
+    correct = (ypos == pos)
+    truepos += (correct & pos)
+    trueneg += (correct & (~pos))
+    falsepos += ((~correct) & pos)
+    falseneg += ((~correct) & (~pos))
+
+
+# calculate metrics
+old_settings = np.seterr(divide='ignore')
+precision = truepos / (truepos + falseneg)
+recall = truepos / (truepos + falseneg)
+precision = np.nan_to_num(precision, nan=0.0)
+recall = np.nan_to_num(recall, nan=0.0)
+f1 = (2 * precision * recall) / (precision + recall)
+f1 = np.nan_to_num(f1, nan=0.0)
+avg_f1 = np.mean(f1)
+avg_precision = np.mean(precision)
+avg_recall = np.mean(recall)
+np.seterr(**old_settings)
+
+# make plot
+index = np.arange(MIDI_MIN, MIDI_MAX)
+plt.plot(index, precision)
+plt.plot(index, recall)
+plt.plot(index, f1)
+plt.xlabel("midi note")
+plt.ylim(0, 1)
+plt.legend(["precision", "recall", "f1"])
+plt.savefig(MODEL_DIR+"test_f1.png")
 
 
 print("\nEvaluating on test set")
 results = model.evaluate(test_gen)
 
-if isinstance(results, dict):
+if isinstance(results, list):
     results = {model.metrics_names[i]:v for i,v in enumerate(results)}
-    print("Results:")
-    for k,v in results.items():
-        print(" ", k+":", v)
 else:
-    print(results)
+    results = {"loss": results}
+results.update({
+    "avg_f1": avg_f1,
+    "avg_precision": avg_precision,
+    "avg_recall": avg_recall,
+})
+print("Results:")
+for k,v in results.items():
+    print(" ", k+":", v)
+
 
 with open(MODEL_DIR+"test_results.json", "w") as f:
     json.dump(results, f, indent=2)
+
