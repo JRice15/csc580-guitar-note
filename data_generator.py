@@ -13,7 +13,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from utils import (MIDI_MAX, MIDI_MIN, audio_CQT, load_annot_df_from_midi,
-                   play_audio, DB_MAX, DB_MIN)
+                   play_audio, DB_MAX, DB_MIN, format_sec_strs)
 
 AUDIO_DIR = "guitarset/audio_mono-mic/"
 ANNOT_DIR = "guitarset/annotation/"
@@ -35,7 +35,7 @@ class SpectogramGenerator(keras.utils.Sequence):
         self.elems = []
         for id in self.ids:
             dur = librosa.get_duration(filename=AUDIO_DIR+id+"_mic.wav")
-            steps = (np.arange(0, dur-dur_step)/dur_step).astype(int)
+            steps = format_sec_strs(np.arange(0, dur-dur_step, dur_step))
             self.elems += [(id, s) for s in steps]
         self.elems = self.elems
         self.rng.shuffle(self.elems)
@@ -62,20 +62,21 @@ class SpectogramGenerator(keras.utils.Sequence):
                 if i % 20 == 0:
                     print(" ", i, "of", len(self.ids))
                 df = load_annot_df_from_midi(ANNOT_DIR+file_id+".jams")
-                df["round_start"] = np.floor(df["time"] / self.dur_step)
-                df["round_end"] = np.ceil(df["end"] / self.dur_step)
+                df["round_start"] = np.floor(df["time"] / self.dur_step) * self.dur_step
+                df["round_end"] = np.ceil(df["end"] / self.dur_step) * self.dur_step
                 df["round_midi"] = df["midi"].round().astype(int)
                 new_rows = []
                 for row in df.itertuples():
                     steps = np.arange(row.round_start, row.round_end, self.dur_step)
-                    for step in (steps/self.dur_step):
+                    steps = format_sec_strs(steps)
+                    for step in steps:
                         if MIDI_MIN <= row.round_midi <= MIDI_MAX:
                             new_rows.append([
-                                int(step), row.string_num, row.round_midi
+                                step, row.string_num, row.round_midi
                             ])
-                df = pd.DataFrame(new_rows, columns=["step", "string_num", "midi"])
-                df = df.sort_values("step")
-                df = df.set_index("step")
+                df = pd.DataFrame(new_rows, columns=["sec", "string_num", "midi"])
+                df = df.sort_values("sec")
+                df = df.set_index("sec")
                 dfs.append(df)
 
             full = pd.concat(dfs, axis=0, keys=self.ids)
@@ -96,8 +97,8 @@ class SpectogramGenerator(keras.utils.Sequence):
         elems = self.elems[idx*self.batchsize:(idx+1)*self.batchsize]
         self._Y_batch.fill(0)
         for i,elem in enumerate(elems):
-            file_id, start_step = elem
-            x = audio_CQT(AUDIO_DIR+file_id+"_mic.wav", start_step*self.dur_step, self.dur_step)
+            file_id, sec = elem
+            x = audio_CQT(AUDIO_DIR+file_id+"_mic.wav", float(sec), self.dur_step)
             self._X_batch[i] = x
             if elem in self.annot_df.index:
                 notes = self.annot_df.loc[elem]
@@ -168,3 +169,20 @@ if __name__ == "__main__":
     tr.summary()
     v.summary()
     te.summary()
+
+    print("Train set annotation dataframe:")
+    print(tr.annot_df)
+
+    TEST_JAMS = "guitarset/annotation/05_BN2-131-B_comp.jams"
+    midi = load_annot_df_from_midi(TEST_JAMS)
+
+    midi = midi[midi["time"] <= 11.8]
+    midi = midi[midi["end"] >= 11.6]
+    midi["midi"] = np.round(midi["midi"])
+
+    print("Jams midi:")
+    print(midi)
+
+    print("TestGen midi:")
+    elem = ("05_BN2-131-B_comp", "11.60")
+    print(te.annot_df.loc[elem])

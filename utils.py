@@ -15,6 +15,8 @@ FREQ_MIN = librosa.core.midi_to_hz(MIDI_MIN)
 FREQ_MAX = librosa.core.midi_to_hz(MIDI_MAX)
 DB_MIN = -120.0
 DB_MAX = 0.0
+# samplerate of all guitarset audio
+SAMPLERATE = 44100
 
 def play_audio(data, samplerate):
     sd.play(data, samplerate)
@@ -33,6 +35,8 @@ def audio_CQT(audio_path, start, dur):
         start, dur: in seconds
     """
     sr = librosa.get_samplerate(audio_path)
+    if sr != SAMPLERATE:
+        raise ValueError("Unexpected samplerate of {}. Expected {}".format(sr, SAMPLERATE))
     data, sr = librosa.load(audio_path, sr=sr, mono=True, offset=start, duration=dur)
     CQT = librosa.cqt(data, sr=sr, hop_length=1024, fmin=FREQ_MIN, n_bins=(MIDI_MAX-MIDI_MIN), bins_per_octave=12)
     CQT_mag = librosa.magphase(CQT)[0]
@@ -126,22 +130,28 @@ def plot_pred_probs_v_groundtruth(gt, pred, title, outdir):
     plt.savefig(outdir + title + ".png")
     plt.clf()
 
+def format_sec_strs(nums):
+    """
+    convert a sequence of floats, which represent seconds, to a common string format
+    """
+    return ["{:0>5.2f}".format(round(n, 2)) for n in nums]
+    
 
-
-TEST_AUDIO = "guitarset/audio_mono-mic/05_BN3-154-E_comp_mic.wav"
-aud, sr = load_audio(TEST_AUDIO, 19, 0.2)
-play_audio(aud, sr)
-
+# TEST_AUDIO = "guitarset/audio_mono-mic/05_BN3-154-E_comp_mic.wav"
+# aud, sr = load_audio(TEST_AUDIO, 19, 0.2)
+# play_audio(aud, sr)
 
 # spect = audio_CQT(TEST_AUDIO, 19, 0.2)
 # plot_spectrogram(spect, 0.2, "test", "", zero_one_scaled=False)
 
-TEST_JAMS = "guitarset/annotation/05_BN3-154-E_comp.jams"
-midi = load_annot_df_from_midi(TEST_JAMS)
-print(midi)
+# TEST_JAMS = "guitarset/annotation/05_BN3-154-E_comp.jams"
+# midi = load_annot_df_from_midi(TEST_JAMS)
 
-midi = midi[midi["time"] <= 19.2]
-midi = midi[midi["end"] >= 19.0]
-midi["midi"] = np.round(midi["midi"])
+# midi = midi[midi["time"] <= 19.2]
+# midi = midi[midi["end"] >= 19.0]
+# midi["midi"] = np.round(midi["midi"])
 
-print(midi)
+# a = np.arange(20)
+
+# a[pd.Series([2, 4, 9, 4, 8])] = -1
+# print(a)

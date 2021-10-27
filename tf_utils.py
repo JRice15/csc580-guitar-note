@@ -17,3 +17,6 @@ def output_model(model, directory):
         tf.keras.utils.plot_model(model, to_file=os.path.join(directory, "model.png"))
     except Exception as e:
         print("Failed to plot model: " + str(e))
+
+    
+
