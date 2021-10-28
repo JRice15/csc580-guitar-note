@@ -41,10 +41,10 @@ def audio_CQT(audio_path, start, dur):
     CQT = librosa.cqt(data, sr=sr, hop_length=1024, fmin=FREQ_MIN, n_bins=(MIDI_MAX-MIDI_MIN), bins_per_octave=12)
     CQT_mag = librosa.magphase(CQT)[0]
     # print("\n", CQT_mag.max(), CQT_mag.min(), "\n")
-    # CQT_mag = CQT_mag ** 4
+    CQT_mag = CQT_mag ** 4
     ref = max(CQT_mag.max(), 1.0)
     CQT = librosa.core.amplitude_to_db(CQT_mag, ref=ref) # removed ref=np.amax arg
-    # CQT[CQT < -60] = -120
+    CQT[CQT < -60] = -120
     return CQT
 
 

@@ -97,7 +97,7 @@ for i,(x,y) in tqdm(enumerate(test_gen), total=len(test_gen)):
 
 # calculate metrics
 old_settings = np.seterr(divide='ignore')
-precision = truepos / (truepos + falseneg)
+precision = truepos / (truepos + falsepos)
 recall = truepos / (truepos + falseneg)
 precision = np.nan_to_num(precision, nan=0.0)
 recall = np.nan_to_num(recall, nan=0.0)
@@ -116,7 +116,7 @@ plt.plot(index, f1)
 plt.xlabel("midi note")
 plt.ylim(0, 1)
 plt.legend(["precision", "recall", "f1"])
-plt.savefig(MODEL_DIR+"test_f1.png")
+plt.savefig(MODEL_DIR+"test_set_f1_curve.png")
 
 
 print("\nEvaluating on test set")
