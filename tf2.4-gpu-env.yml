@@ -10,6 +10,7 @@ dependencies:
   - librosa
   - pandas
   - pydot
+  - pytables
   - pysoundfile
   - python=3.9
   - python-sounddevice
