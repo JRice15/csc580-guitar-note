@@ -130,7 +130,7 @@ def big_lstm1(input_shape):
     x = layers.LSTM(128, return_sequences=True)(x)
     x = layers.LSTM(256, return_sequences=True)(x)
     # accumulated features
-    x = layers.LSTM(256, return_sequences=True)(x)
+    x = layers.LSTM(256)(x)
 
     # dense output network
     x = layers.Dense(128, activation='relu')(x)
