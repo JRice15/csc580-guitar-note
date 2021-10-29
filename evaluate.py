@@ -73,6 +73,27 @@ for i in tqdm(range(0, len(test_gen), len(test_gen)//10)):
     plot_spectrogram(x, test_gen.dur_step, elem_id_str+"_input", MODEL_DIR+"visualizations/")
 
 
+print("\nEvaluating on test set")
+results = model.evaluate(test_gen)
+
+if isinstance(results, list):
+    results = {model.metrics_names[i]:v for i,v in enumerate(results)}
+else:
+    results = {"loss": results}
+results.update({
+    "avg_f1": avg_f1,
+    "avg_precision": avg_precision,
+    "avg_recall": avg_recall,
+})
+print("Results:")
+for k,v in results.items():
+    print(" ", k+":", v)
+
+
+with open(MODEL_DIR+"test_results.json", "w") as f:
+    json.dump(results, f, indent=2)
+
+
 print("Calculating metrics...")
 # precision and recall parameters
 # true/false positives, true/false negatives
@@ -119,13 +140,6 @@ plt.legend(["precision", "recall", "f1"])
 plt.savefig(MODEL_DIR+"test_set_f1_curve.png")
 
 
-print("\nEvaluating on test set")
-results = model.evaluate(test_gen)
-
-if isinstance(results, list):
-    results = {model.metrics_names[i]:v for i,v in enumerate(results)}
-else:
-    results = {"loss": results}
 results.update({
     "avg_f1": avg_f1,
     "avg_precision": avg_precision,
@@ -135,7 +149,5 @@ print("Results:")
 for k,v in results.items():
     print(" ", k+":", v)
 
-
 with open(MODEL_DIR+"test_results.json", "w") as f:
     json.dump(results, f, indent=2)
-
