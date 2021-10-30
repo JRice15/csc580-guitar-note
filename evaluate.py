@@ -80,15 +80,9 @@ if isinstance(results, list):
     results = {model.metrics_names[i]:v for i,v in enumerate(results)}
 else:
     results = {"loss": results}
-results.update({
-    "avg_f1": avg_f1,
-    "avg_precision": avg_precision,
-    "avg_recall": avg_recall,
-})
 print("Results:")
 for k,v in results.items():
     print(" ", k+":", v)
-
 
 with open(MODEL_DIR+"test_results.json", "w") as f:
     json.dump(results, f, indent=2)
