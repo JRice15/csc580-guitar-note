@@ -16,6 +16,10 @@ def get_model(modelname, input_shape):
         return lstm2(input_shape)
     elif modelname == "big-lstm1":
         return big_lstm1(input_shape)
+    elif modelname == "conv-lstm1":
+        return conv_lstm1(input_shape)
+    elif modelname == "conv-bi-lstm1":
+        return conv_bidirectional_lstm1(input_shape)
     else:
         raise ValueError("Unknown model {}".format(modelname))
 
@@ -92,7 +96,7 @@ def lstm2(input_shape):
     model_in = layers.Input(shape=input_shape)
     x = model_in
 
-    batchsize, time_dim, freq_dim = x.shape
+    batchsize, freq_dim, time_dim = x.shape
 
     # change from shape (batch, freq, time) to (batch, time, freq) to make it a timeseries
     x = custom_layers.Transpose([0, 2, 1])(x)
@@ -121,7 +125,7 @@ def big_lstm1(input_shape):
     model_in = layers.Input(shape=input_shape)
     x = model_in
 
-    batchsize, time_dim, freq_dim = x.shape
+    batchsize, freq_dim, time_dim = x.shape
 
     # change from shape (batch, freq, time) to (batch, time, freq) to make it a timeseries
     x = custom_layers.Transpose([0, 2, 1])(x)
@@ -137,6 +141,90 @@ def big_lstm1(input_shape):
     x = layers.Dense(64, activation='relu')(x)
     x = layers.Dropout(0.2)(x)
     outputs = layers.Dense(MIDI_MAX-MIDI_MIN, activation='sigmoid', name="output")(x)
+
+    # Create model
+    model = Model(inputs=model_in, outputs=outputs)
+
+    loss = 'binary_crossentropy'
+    # TODO we need to find a meaningful metric for this data
+    metrics = None
+
+    return model, loss, metrics
+
+
+def conv_lstm1(input_shape):
+    model_in = layers.Input(shape=input_shape)
+    x = model_in
+
+    batchsize, freq_dim, time_dim = x.shape
+
+    # change from shape (batch, freq, time) to (batch, time, freq) to make it a timeseries
+    x = custom_layers.Transpose([0, 2, 1])(x)
+    # add channels dimension
+    x = layers.Reshape((time_dim, freq_dim, 1, 1))(x)
+
+    # calculate timestep-wise features
+    x = layers.ConvLSTM2D(32, kernel_size=(3,1), padding="same", return_sequences=True)(x)
+    x = layers.ConvLSTM2D(64, kernel_size=(5,1), padding="same", return_sequences=True)(x)
+    # accumulate features
+    x = layers.ConvLSTM2D(64, kernel_size=(3,1), padding="same")(x)
+    
+    x = layers.Reshape((freq_dim, 64))(x)
+
+    # output net
+    x = layers.Conv1D(32, 3, padding="same", activation="relu")(x)
+    x = layers.Dropout(0.2)(x)
+    x = layers.Conv1D(1, 1, padding="same")(x)
+    x = layers.Reshape((freq_dim,))(x)
+    outputs = layers.Activation("sigmoid")(x)
+
+    # Create model
+    model = Model(inputs=model_in, outputs=outputs)
+
+    loss = 'binary_crossentropy'
+    # TODO we need to find a meaningful metric for this data
+    metrics = None
+
+    return model, loss, metrics
+
+
+def conv_bidirectional_lstm1(input_shape):
+    model_in = layers.Input(shape=input_shape)
+    x = model_in
+
+    batchsize, freq_dim, time_dim = x.shape
+
+    # change from shape (batch, freq, time) to (batch, time, freq) to make it a timeseries
+    x = custom_layers.Transpose([0, 2, 1])(x)
+    # add channels dimension
+    x = layers.Reshape((time_dim, freq_dim, 1, 1))(x)
+
+    # calculate forward timestep-wise features
+    lstm_input = x
+    x = layers.ConvLSTM2D(32, kernel_size=(3,1), padding="same", 
+            return_sequences=True)(x)
+    forward_x = layers.ConvLSTM2D(64, kernel_size=(5,1), padding="same", 
+            return_sequences=True)(x)
+
+    # calculate backward features
+    x = lstm_input
+    x = layers.ConvLSTM2D(32, kernel_size=(3,1), padding="same", 
+            return_sequences=True, go_backwards=True)(x)
+    backward_x = layers.ConvLSTM2D(64, kernel_size=(5,1), padding="same", 
+            return_sequences=True, go_backwards=True)(x)
+
+    # accumulate features
+    x = layers.Concatenate(axis=-1)([forward_x, backward_x])
+    x = layers.ConvLSTM2D(64, kernel_size=(3,1), padding="same")(x)
+
+    x = layers.Reshape((freq_dim, 64))(x)
+
+    # output net
+    x = layers.Conv1D(32, 3, padding="same", activation="relu")(x)
+    x = layers.Dropout(0.2)(x)
+    x = layers.Conv1D(1, 1, padding="same")(x)
+    x = layers.Reshape((freq_dim,))(x)
+    outputs = layers.Activation("sigmoid")(x)
 
     # Create model
     model = Model(inputs=model_in, outputs=outputs)
