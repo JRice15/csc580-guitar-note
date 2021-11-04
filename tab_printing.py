@@ -3,25 +3,28 @@ import time
 
 class NoteHistory():
 
-    def __init__(self, max_len=20):
-        self.strings = {x:[] for x in "EADGBe"}
+    def __init__(self, max_len=50):
+        self.tabs = {x:"" for x in "EADGBe"}
+        self.most_recent_fret = {x:None for x in "EADGBe"}
         self.max_len = max_len
     
     def add_timestep(self, string_fret_map):
-        for string,history in self.strings.items():
+        for string,history in self.tabs.items():
             if string in string_fret_map:
-                formatted = "{:->3}".format(string_fret_map[string])
-                # only add note if it was not present in the previous step
-                if len(history) == 0 or history[-1] != formatted:
-                    history.append(formatted)
-                    # don't output the dashes
+                new_fret = string_fret_map[string]
+                if self.most_recent_fret[string] != new_fret:
+                    self.most_recent_fret[string] = new_fret
+                    formatted = "{:->3}".format(string_fret_map[string])
+                    self.tabs[string] += formatted
+                    # don't add dashes
                     continue
-            history.append("---")
+            else:
+                self.most_recent_fret[string] = None
+            self.tabs[string] += "---"
 
     def report(self):
         for i,string in enumerate("eBGDAE"):
-            hist = self.strings[string][-self.max_len:]
-            stdscr.addstr(i, 0, "{}: {}".format(string, "".join(hist)))
+            stdscr.addstr(i, 0, "{}: {}".format(string, self.tabs[string][-self.max_len:]))
         stdscr.refresh()
 
 
