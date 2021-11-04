@@ -35,9 +35,14 @@ matches = glob.glob("models/"+ARGS.name+"-??????-??????/")
 # get most recent (by date)
 MODEL_DIR = sorted(matches)[-1]
 
+with open(MODEL_DIR+"args.json", "r") as f:
+    saved_args = json.load(f)
+for k,v in saved_args.items():
+    setattr(ARGS, k, v)
+
 print("\nLoading model stored at", MODEL_DIR)
 
-_, _, test_gen = get_generators()
+_, _, test_gen = get_generators(dur_step=ARGS.dur_step)
 test_gen.summary()
 
 model = keras.models.load_model(MODEL_DIR+"model.h5", custom_objects=CUSTOM_LAYER_DICT)

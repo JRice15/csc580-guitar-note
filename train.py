@@ -31,6 +31,7 @@ parser.add_argument("--name",default="default")
 parser.add_argument("--model",required=True)
 parser.add_argument("--lr",default=0.001,type=float,help="learning rate")
 parser.add_argument("--batchsize",default=16,type=int)
+parser.add_argument("--dur-step",default=0.2,type=float)
 ARGS = parser.parse_args()
 
 now = datetime.datetime.now()
@@ -41,7 +42,7 @@ os.makedirs(MODEL_DIR)
 with open(MODEL_DIR+"args.json", "w") as f:
     json.dump(vars(ARGS), f, indent=2)
 
-train_gen, val_gen, _ = get_generators(train_batchsize=ARGS.batchsize)
+train_gen, val_gen, _ = get_generators(train_batchsize=ARGS.batchsize, dur_step=ARGS.dur_step)
 train_gen.summary()
 val_gen.summary()
 input_shape = train_gen.x_shape
