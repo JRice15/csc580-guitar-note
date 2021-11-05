@@ -26,15 +26,19 @@ from custom_layers import CUSTOM_LAYER_DICT
 from models import get_model
 from tab_printing import Tabulator
 from utils import MIDI_MAX, MIDI_MIN, SAMPLERATE, audio_CQT, const_q_transform
+from midi_to_fret import MIDI_TO_FRET
 
-
-def get_random_tab():
-    n_notes = np.random.randint(0, 7)
-    strings = np.random.choice(['E', 'A', 'D', 'G', 'B', 'e'], size=n_notes, replace=False)
-    out = {}
-    for st in strings:
-        out[st] = np.random.randint(0, 19)
-    return out
+def get_frettings(predicted):
+    """
+    args:
+        predicted: list of midi notes
+    returns:
+        dict mapping string name to fret
+    """
+    strings = " EADGBe"
+    predicted_frettings = [MIDI_TO_FRET[x][0] for x in predicted]
+    predicted_frettings = {strings[i]:fret for i,fret in predicted_frettings}
+    return predicted_frettings
 
 
 def load_model(model_dir):
@@ -55,8 +59,7 @@ def live_audio_handler(q, model_dir, output_filename):
             spectro = const_q_transform(audio, SAMPLERATE)
             probs = model.predict(spectro[np.newaxis,...])
             predicted = midi[np.squeeze(probs) >= 0.5]
-            # TODO get read tabs
-            string_fret_map = get_random_tab()
+            string_fret_map = get_frettings(predicted)
             tabulator.add_timestep(string_fret_map)
             tabulator.output_to_curses(stdscr)
     except KeyboardInterrupt:
@@ -114,8 +117,7 @@ def predict_file(model_dir, ARGS):
         spectro = audio_CQT(ARGS.file, start, dur_step)
         probs = model.predict(spectro[np.newaxis,...])
         predicted = midi[np.squeeze(probs) >= 0.5]
-        # TODO get read tabs
-        string_fret_map = get_random_tab()
+        string_fret_map = get_frettings(predicted)
         tabulator.add_timestep(string_fret_map)
     tabulator.output_to_file(ARGS.saveas)
     print("\nTab saved to '{}'\n".format(ARGS.saveas))
@@ -124,7 +126,7 @@ def predict_file(model_dir, ARGS):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--name",default="default",help="model name to use")
-    parser.add_argument("--saveas",default="tab.txt")
+    parser.add_argument("--saveas",default="generated_tabs/tab.txt")
     inpt_grp = parser.add_mutually_exclusive_group(required=True)
     inpt_grp.add_argument("--file",help="input filename")
     inpt_grp.add_argument("--live",action="store_true",help="flag to record live")

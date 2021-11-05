@@ -78,4 +78,4 @@ if __name__ == "__main__":
         curses.nocbreak()
         curses.endwin()
 
-    tabulator.output_to_file("tab.txt")
+    tabulator.output_to_file("generated_tabs/tab.txt")

@@ -3,4 +3,4 @@ __pycache__
 guitarset/
 data/
 models/
-tab.txt
+generated_tabs

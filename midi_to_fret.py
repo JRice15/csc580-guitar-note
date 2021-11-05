@@ -1,29 +1,9 @@
-lowest_note = [40,45,50,55,59,64]
-string_notes = [[] for i in range(6)]
-for string in range(0,6):
-    for fret in range(0,19):
-        string_notes[string].append(lowest_note[string] + fret)
-
-for i in range(0,6):
-    print("String " + str(i) + ":")
-    print(string_notes[i])
-
-for note in range(40, 83):
-    frettings = []
-    for string in range(6):
-        try:
-            fret = string_notes[string].index(note)
-            frettings.append((string+1, fret))
-        except ValueError:
-            pass
-    print(str(note) + " : " + str(frettings) + ",")
-
 
 # #1st string is low E
 # #6th string is high E
 # 40 to 82
 
-midi_to_fret = {
+MIDI_TO_FRET = {
     40 : [(1, 0)],
     41 : [(1, 1)],
     42 : [(1, 2)],
@@ -68,3 +48,30 @@ midi_to_fret = {
     81 : [(6, 17)],
     82 : [(6, 18)]
 } 
+
+def demo():
+    lowest_note = [40,45,50,55,59,64]
+    string_notes = [[] for i in range(6)]
+    for string in range(0,6):
+        for fret in range(0,19):
+            string_notes[string].append(lowest_note[string] + fret)
+
+    for i in range(0,6):
+        print("String " + str(i) + ":")
+        print(string_notes[i])
+
+    for note in range(40, 83):
+        frettings = []
+        for string in range(6):
+            try:
+                fret = string_notes[string].index(note)
+                frettings.append((string+1, fret))
+            except ValueError:
+                pass
+        print(str(note) + " : " + str(frettings) + ",")
+
+
+
+
+if __name__ == "__main__":
+    demo()

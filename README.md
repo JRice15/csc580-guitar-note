@@ -7,3 +7,18 @@ Create the conda environment as follows:
 
 where `<name>` is what name you want to call this new environment (I called mine "guitartab").
 
+
+## Training
+
+`python3 train.py --model <model-name> --name <optional-name-to-save-under>`
+
+## Using a model
+
+On audio from a file:
+
+`python3 generate_tabulature.py --name <optional-name> --file <filename> --saveas <optional-output-tab-filename>`
+
+On live audio (from builtin microphone):
+
+`python3 generate_tabulature.py --name <optional-name> --live --saveas <optional-output-tab-filename>`
+
