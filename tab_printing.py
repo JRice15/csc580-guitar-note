@@ -1,12 +1,12 @@
 import curses
 import time
+import math
 
-class NoteHistory():
+class Tabulator():
 
-    def __init__(self, max_len=50):
+    def __init__(self):
         self.tabs = {x:"" for x in "EADGBe"}
         self.most_recent_fret = {x:None for x in "EADGBe"}
-        self.max_len = max_len
     
     def add_timestep(self, string_fret_map):
         for string,history in self.tabs.items():
@@ -22,12 +22,31 @@ class NoteHistory():
                 self.most_recent_fret[string] = None
             self.tabs[string] += "---"
 
-    def report(self):
+
+    def output_to_curses(self, screen, maxlen=48):
+        assert maxlen % 3 == 0
+        maxlen -= 3
+        tablen = len(self.tabs["E"])
+        # only most recent line needs updating
+        step = math.ceil(tablen / maxlen) - 1
         for i,string in enumerate("eBGDAE"):
-            stdscr.addstr(i, 0, "{}: {}".format(string, self.tabs[string][-self.max_len:]))
-        stdscr.refresh()
+            line = i + (step * 7)
+            tab = self.tabs[string][step*maxlen:(step+1)*maxlen]
+            screen.addstr(line, 0, "{}: {}".format(string, tab))
+        screen.refresh()
 
-
+    def output_to_file(self, filename, maxlen=48):
+        assert maxlen % 3 == 0
+        maxlen -= 3
+        tablen = len(self.tabs["E"])
+        # only most recent line needs updating
+        steps = math.ceil(tablen / maxlen)
+        with open(filename, "w") as f:
+            for step in range(steps):
+                for i,string in enumerate("eBGDAE"):
+                    tab = self.tabs[string][step*maxlen:(step+1)*maxlen]
+                    f.write("{}: {}\n".format(string, tab))
+                f.write("\n")
 
 if __name__ == "__main__":
     stdscr = curses.initscr()
@@ -46,15 +65,17 @@ if __name__ == "__main__":
         {},
     ]
 
-    N = NoteHistory()
+    tabulator = Tabulator()
 
     try:
         for note in notes:
-            N.add_timestep(note)
-            N.report()
-            time.sleep(0.5)
+            tabulator.add_timestep(note)
+            tabulator.output_to_curses(stdscr)
+            time.sleep(0.2)
     finally:
-        time.sleep(2)
+        time.sleep(1)
         curses.echo()
         curses.nocbreak()
         curses.endwin()
+
+    tabulator.output_to_file("tab.txt")

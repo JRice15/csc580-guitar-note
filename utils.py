@@ -27,6 +27,16 @@ def load_audio(audio_path, start, dur):
     data, sr = librosa.load(audio_path, sr=sr, mono=True, offset=start, duration=dur)
     return data, sr
 
+def const_q_transform(audio, sr):
+    CQT = librosa.cqt(audio, sr=sr, hop_length=1024, fmin=FREQ_MIN, n_bins=(MIDI_MAX-MIDI_MIN), bins_per_octave=12)
+    CQT_mag = librosa.magphase(CQT)[0]
+    # print("\n", CQT_mag.max(), CQT_mag.min(), "\n")
+    # CQT_mag = CQT_mag ** 4
+    ref = max(CQT_mag.max(), 1.0)
+    CQT = librosa.core.amplitude_to_db(CQT_mag, ref=ref) # removed ref=np.amax arg
+    # CQT[CQT < -60] = -120
+    return CQT
+
 def audio_CQT(audio_path, start, dur):
     """
     Perform the Constant-Q Transform
@@ -38,14 +48,7 @@ def audio_CQT(audio_path, start, dur):
     if sr != SAMPLERATE:
         raise ValueError("Unexpected samplerate of {}. Expected {}".format(sr, SAMPLERATE))
     data, sr = librosa.load(audio_path, sr=sr, mono=True, offset=start, duration=dur)
-    CQT = librosa.cqt(data, sr=sr, hop_length=1024, fmin=FREQ_MIN, n_bins=(MIDI_MAX-MIDI_MIN), bins_per_octave=12)
-    CQT_mag = librosa.magphase(CQT)[0]
-    # print("\n", CQT_mag.max(), CQT_mag.min(), "\n")
-    # CQT_mag = CQT_mag ** 4
-    ref = max(CQT_mag.max(), 1.0)
-    CQT = librosa.core.amplitude_to_db(CQT_mag, ref=ref) # removed ref=np.amax arg
-    # CQT[CQT < -60] = -120
-    return CQT
+    return const_q_transform(data, sr)
 
 
 def load_annot_df_from_pitchcontour(filename):
