@@ -35,7 +35,7 @@ def load_model(model_dir):
     return keras.models.load_model(model_dir+"model.h5", custom_objects=CUSTOM_LAYER_DICT)
 
 
-def live_audio_handler(q, model_dir, output_filename):
+def live_audio_handler(q, model_dir, output_filename, conf_threshold):
     model = load_model(model_dir)
     tabulator = Tabulator()
     midi = np.arange(MIDI_MIN, MIDI_MAX)
@@ -50,7 +50,7 @@ def live_audio_handler(q, model_dir, output_filename):
             spectro = const_q_transform(audio, SAMPLERATE)
             spectro = (spectro - DB_MIN) / (DB_MAX - DB_MIN)
             probs = model.predict(spectro[np.newaxis,...])
-            predicted = midi[np.squeeze(probs) >= 0.5]
+            predicted = midi[np.squeeze(probs) >= conf_threshold]
             string_fret_map = find_fretting(predicted, prev_fretting=prev)
             tabulator.add_timestep(string_fret_map)
             tabulator.output_to_curses(stdscr)
@@ -86,7 +86,7 @@ def predict_live(model_dir, ARGS):
     # data handler process
     p = multiprocessing.Process(
         target=live_audio_handler, 
-        args=(q, model_dir, ARGS.saveas)
+        args=(q, model_dir, ARGS.saveas, ARGS.thresh)
     )
     p.start()
 
@@ -111,7 +111,7 @@ def predict_file(model_dir, ARGS):
         spectro = audio_CQT(ARGS.file, start, dur_step)
         spectro = (spectro - DB_MIN) / (DB_MAX - DB_MIN)
         probs = model.predict(spectro[np.newaxis,...])
-        predicted = midi[np.squeeze(probs) >= 0.5]
+        predicted = midi[np.squeeze(probs) >= ARGS.thresh]
         string_fret_map = find_fretting(predicted, prev_fretting=prev)
         tabulator.add_timestep(string_fret_map)
         prev = string_fret_map
@@ -123,12 +123,14 @@ def predict_file(model_dir, ARGS):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--name",default="default",help="model name to use")
-    parser.add_argument("--saveas",default="generated_tabs/tab.txt")
+    parser.add_argument("--thresh",type=float,default=0.5,help="confidence threshold to predict that a note is played")
+    parser.add_argument("--saveas",default="tab",help="name of file to save, as generated_tabs/<saveas>.txt")
     inpt_grp = parser.add_mutually_exclusive_group(required=True)
     inpt_grp.add_argument("--file",help="input filename")
     inpt_grp.add_argument("--live",action="store_true",help="flag to record live")
 
     ARGS = parser.parse_args()
+    ARGS.saveas = "generated_tabs/" + ARGS.saveas + ".txt"
 
     matches = glob.glob("models/"+ARGS.name+"-??????-??????/")
     # get most recent (by date)
