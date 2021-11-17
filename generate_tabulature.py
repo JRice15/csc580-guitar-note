@@ -1,4 +1,5 @@
 import argparse
+import curses
 import datetime
 import glob
 import json
@@ -7,7 +8,6 @@ import os
 import pickle
 import re
 import sys
-import curses
 from pathlib import PurePath
 
 import jams
@@ -23,11 +23,12 @@ from tensorflow.keras.layers import (Conv2D, Dense, Dropout, Flatten, Input,
                                      MaxPooling2D)
 
 from custom_layers import CUSTOM_LAYER_DICT
+from find_next_tab import find_fretting
+from midi_to_fret import MIDI_TO_FRET
 from models import get_model
 from tab_printing import Tabulator
-from utils import MIDI_MAX, MIDI_MIN, SAMPLERATE, audio_CQT, const_q_transform
-from midi_to_fret import MIDI_TO_FRET
-from find_next_tab import find_fretting
+from utils import (DB_MAX, DB_MIN, MIDI_MAX, MIDI_MIN, SAMPLERATE, audio_CQT,
+                   const_q_transform, plot_spectrogram)
 
 
 def load_model(model_dir):
@@ -47,6 +48,7 @@ def live_audio_handler(q, model_dir, output_filename):
         while True:
             audio = q.get()
             spectro = const_q_transform(audio, SAMPLERATE)
+            spectro = (spectro - DB_MIN) / (DB_MAX - DB_MIN)
             probs = model.predict(spectro[np.newaxis,...])
             predicted = midi[np.squeeze(probs) >= 0.5]
             string_fret_map = find_fretting(predicted, prev_fretting=prev)
@@ -107,11 +109,13 @@ def predict_file(model_dir, ARGS):
     prev = None
     for start in np.arange(0, duration-dur_step, dur_step):
         spectro = audio_CQT(ARGS.file, start, dur_step)
+        spectro = (spectro - DB_MIN) / (DB_MAX - DB_MIN)
         probs = model.predict(spectro[np.newaxis,...])
         predicted = midi[np.squeeze(probs) >= 0.5]
         string_fret_map = find_fretting(predicted, prev_fretting=prev)
         tabulator.add_timestep(string_fret_map)
         prev = string_fret_map
+        # tabulator.print_out()
     tabulator.output_to_file(ARGS.saveas)
     print("\nTab saved to '{}'\n".format(ARGS.saveas))
 

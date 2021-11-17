@@ -119,23 +119,30 @@ for i,(x,y) in tqdm(enumerate(test_gen), total=len(test_gen)):
 old_settings = np.seterr(divide='ignore')
 precision = truepos / (truepos + falsepos)
 recall = truepos / (truepos + falseneg)
-precision = np.nan_to_num(precision, nan=0.0)
-recall = np.nan_to_num(recall, nan=0.0)
 f1 = (2 * precision * recall) / (precision + recall)
-f1 = np.nan_to_num(f1, nan=0.0)
-avg_f1 = np.mean(f1)
-avg_precision = np.mean(precision)
-avg_recall = np.mean(recall)
+acc = (truepos + trueneg) / (truepos + falsepos + trueneg + falseneg)
+
+# avgs
+avg_precision = np.nanmean(precision)
+avg_recall = np.nanmean(recall)
+avg_f1 = np.nanmean(f1)
+avg_acc = np.nanmean(acc)
+
 np.seterr(**old_settings)
 
+# zero out NaNs for plot
+precision = np.nan_to_num(precision, nan=0.0)
+recall = np.nan_to_num(recall, nan=0.0)
+f1 = np.nan_to_num(f1, nan=0.0)
 # make plot
 index = np.arange(MIDI_MIN, MIDI_MAX)
 plt.plot(index, precision)
 plt.plot(index, recall)
 plt.plot(index, f1)
+plt.plot(index, acc)
 plt.xlabel("midi note")
 plt.ylim(0, 1)
-plt.legend(["precision", "recall", "f1"])
+plt.legend(["precision", "recall", "f1", "accuracy"])
 plt.savefig(MODEL_DIR+"test_set_f1_curve.png")
 
 
@@ -143,6 +150,7 @@ results.update({
     "avg_f1": avg_f1,
     "avg_precision": avg_precision,
     "avg_recall": avg_recall,
+    "avg_acc": avg_acc,
 })
 print("Results:")
 for k,v in results.items():

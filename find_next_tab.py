@@ -136,8 +136,9 @@ def find_fretting(midi, prev_fretting=None):
             options = MIDI_TO_FRET[m]
             options = [opt for opt in options if (opt[1] >= min_fret - MAX_STRETCH) and (opt[1] <= max_fret + MAX_STRETCH) and (opt[0] not in used_strings)]
             if not len(options):
-                warnings.warn("No option for " + str(m))
-            fretting.append(options[-1])
+                warnings.warn("FAILED TO TABULATE " + str(m))
+            else:
+                fretting.append(options[-1])
         return fretting[::-1]
     
     else:
