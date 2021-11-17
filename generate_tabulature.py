@@ -27,18 +27,7 @@ from models import get_model
 from tab_printing import Tabulator
 from utils import MIDI_MAX, MIDI_MIN, SAMPLERATE, audio_CQT, const_q_transform
 from midi_to_fret import MIDI_TO_FRET
-
-def get_frettings(predicted):
-    """
-    args:
-        predicted: list of midi notes
-    returns:
-        dict mapping string name to fret
-    """
-    strings = " EADGBe"
-    predicted_frettings = [MIDI_TO_FRET[x][0] for x in predicted]
-    predicted_frettings = {strings[i]:fret for i,fret in predicted_frettings}
-    return predicted_frettings
+from find_next_tab import find_fretting
 
 
 def load_model(model_dir):
@@ -54,14 +43,16 @@ def live_audio_handler(q, model_dir, output_filename):
     curses.noecho()
     curses.cbreak()
     try:
+        prev = None
         while True:
             audio = q.get()
             spectro = const_q_transform(audio, SAMPLERATE)
             probs = model.predict(spectro[np.newaxis,...])
             predicted = midi[np.squeeze(probs) >= 0.5]
-            string_fret_map = get_frettings(predicted)
+            string_fret_map = find_fretting(predicted, prev_fretting=prev)
             tabulator.add_timestep(string_fret_map)
             tabulator.output_to_curses(stdscr)
+            prev = string_fret_map
     except KeyboardInterrupt:
         pass
     finally:
@@ -113,12 +104,14 @@ def predict_file(model_dir, ARGS):
     duration = librosa.get_duration(filename=ARGS.file)
     dur_step = ARGS.dur_step
     midi = np.arange(MIDI_MIN, MIDI_MAX)
+    prev = None
     for start in np.arange(0, duration-dur_step, dur_step):
         spectro = audio_CQT(ARGS.file, start, dur_step)
         probs = model.predict(spectro[np.newaxis,...])
         predicted = midi[np.squeeze(probs) >= 0.5]
-        string_fret_map = get_frettings(predicted)
+        string_fret_map = find_fretting(predicted, prev_fretting=prev)
         tabulator.add_timestep(string_fret_map)
+        prev = string_fret_map
     tabulator.output_to_file(ARGS.saveas)
     print("\nTab saved to '{}'\n".format(ARGS.saveas))
 

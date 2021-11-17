@@ -2,13 +2,35 @@ import curses
 import time
 import math
 
+def fretting_to_dict(fretting):
+    """
+    args:
+        fretting: list of tuples, in (string_number, fret) format
+    returns:
+        dict mapping string name to fret
+    """
+    strings = " EADGBe"
+    if not len(fretting):
+        return {}
+    dct = {strings[i]:fret for i,fret in fretting}
+    return dct
+
+
 class Tabulator():
 
-    def __init__(self):
+    def __init__(self, maxlen=48):
         self.tabs = {x:"" for x in "EADGBe"}
         self.most_recent_fret = {x:None for x in "EADGBe"}
+        self.maxlen = maxlen
+        assert self.maxlen % 3 == 0
     
     def add_timestep(self, string_fret_map):
+        """
+        args:
+            string_fret_map: dict, or list of tuples
+        """
+        if not isinstance(string_fret_map, dict):
+            string_fret_map = fretting_to_dict(string_fret_map)
         for string,history in self.tabs.items():
             if string in string_fret_map:
                 new_fret = string_fret_map[string]
@@ -16,28 +38,39 @@ class Tabulator():
                     self.most_recent_fret[string] = new_fret
                     formatted = "{:->3}".format(string_fret_map[string])
                     self.tabs[string] += formatted
-                    # don't add dashes
-                    continue
+                else:
+                    self.tabs[string] += "--~"
             else:
                 self.most_recent_fret[string] = None
-            self.tabs[string] += "---"
+                self.tabs[string] += "---"
 
 
-    def output_to_curses(self, screen, maxlen=48):
-        assert maxlen % 3 == 0
+    def output_to_curses(self, screen):
+        maxlines, maxlen = screen.getmaxyx()
         maxlen -= 3
         tablen = len(self.tabs["E"])
-        # only most recent line needs updating
-        step = math.ceil(tablen / maxlen) - 1
-        for i,string in enumerate("eBGDAE"):
-            line = i + (step * 7)
-            tab = self.tabs[string][step*maxlen:(step+1)*maxlen]
-            screen.addstr(line, 0, "{}: {}".format(string, tab))
+        steps = math.ceil(tablen / maxlen)
+        total_lines = steps * 7
+        overflow = max(total_lines - maxlines, 0)
+        for step in range(steps):
+            for i,string in enumerate("eBGDAE"):
+                line = i + ((step - overflow) * 7)
+                tab = self.tabs[string][step*maxlen:(step+1)*maxlen]
+                screen.addstr(line, 0, "{}: {}".format(string, tab))
         screen.refresh()
 
-    def output_to_file(self, filename, maxlen=48):
-        assert maxlen % 3 == 0
-        maxlen -= 3
+    def print_out(self):
+        maxlen = self.maxlen - 3
+        tablen = len(self.tabs["E"])
+        # only most recent line needs updating
+        steps = math.ceil(tablen / maxlen)
+        for step in range(steps):
+            for i,string in enumerate("eBGDAE"):
+                tab = self.tabs[string][step*maxlen:(step+1)*maxlen]
+                print("{}: {}".format(string, tab))
+
+    def output_to_file(self, filename):
+        maxlen = self.maxlen - 3
         tablen = len(self.tabs["E"])
         # only most recent line needs updating
         steps = math.ceil(tablen / maxlen)
